@@ -19,8 +19,12 @@
 
 #include <glib.h>
 #include <glib/gprintf.h>
+
+#ifdef G_OS_UNIX
 #include <gio/gunixsocketaddress.h>
 #include <gio/gunixfdmessage.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -113,10 +117,28 @@ _gdk_broadway_server_new (GdkDisplay *display,
   char *local_socket_type = NULL;
   int port;
 
-  if (display_name == NULL)
-    display_name = ":0";
+  if (display == NULL)
+    {
+#ifdef G_OS_UNIX
+      display_name = ":0";
+#elif defined (G_OS_WIN32)
+      display_name = ":tcp";
+#endif
+    }
 
-  if (display_name[0] == ':' && g_ascii_isdigit(display_name[1]))
+  if (g_str_has_prefix (display_name, ":tcp"))
+    {
+      GInetAddress *inet;
+
+      port = 9090 + strtol (display_name + strlen (":tcp"), NULL, 10);
+
+      inet = g_inet_address_new_from_string ("127.0.0.1");
+      address = g_inet_socket_address_new (inet, port);
+      g_object_unref (inet);
+    }
+
+#ifdef G_OS_UNIX
+  else if (display_name[0] == ':' && g_ascii_isdigit(display_name[1]))
     {
       char *path, *basename;
 
@@ -129,6 +151,7 @@ _gdk_broadway_server_new (GdkDisplay *display,
                                                      G_UNIX_SOCKET_ADDRESS_PATH);
       g_free (path);
     }
+#endif
   else
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,

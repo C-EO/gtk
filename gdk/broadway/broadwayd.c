@@ -17,6 +17,10 @@
 #include <gio/gunixfdmessage.h>
 #endif
 
+#ifdef G_OS_WIN32
+#include <io.h>
+#endif
+
 #include "broadway-server.h"
 
 BroadwayServer *server;
@@ -570,13 +574,32 @@ main (int argc, char *argv[])
     }
 
   if (display == NULL)
-    display = ":0";
+    {
+#ifdef G_OS_UNIX
+      display = ":0";
+#elif defined (G_OS_WIN32)
+      display = ":tcp";
+#endif
+    }
 
-  if (display[0] == ':' && g_ascii_isdigit(display[1]))
+  if (g_str_has_prefix (display, ":tcp"))
+    {
+      GInetAddress *inet;
+
+      port = 9090 + strtol (display + strlen (":tcp"), NULL, 10);
+
+      inet = g_inet_address_new_from_string ("127.0.0.1");
+      address = g_inet_socket_address_new (inet, port);
+      g_object_unref (inet);
+    }
+
+#ifdef G_OS_UNIX
+  else if (display[0] == ':' && g_ascii_isdigit(display[1]))
     {
       char *path, *basename;
 
       port = strtol (display + strlen (":"), NULL, 10);
+
       basename = g_strdup_printf ("broadway%d.socket", port + 1);
       path = g_build_filename (g_get_user_runtime_dir (), basename, NULL);
       g_free (basename);
@@ -588,6 +611,7 @@ main (int argc, char *argv[])
                                                      G_UNIX_SOCKET_ADDRESS_PATH);
       g_free (path);
     }
+#endif
   else
     {
       g_printerr ("Failed to parse display %s\n", display);
@@ -597,9 +621,11 @@ main (int argc, char *argv[])
   if (http_port == 0)
     http_port = 8080 + port;
 
+#ifdef G_OS_UNIX
   if (unixsocket_address != NULL)
     server = broadway_server_on_unix_socket_new (unixsocket_address, &error);
   else
+#endif
     server = broadway_server_new (http_address,
                                   http_port,
                                   ssl_cert,
