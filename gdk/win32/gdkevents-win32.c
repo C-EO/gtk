@@ -2772,6 +2772,8 @@ gdk_event_translate (MSG *msg,
                                     NULL,
                                     _gdk_win32_get_next_tick (msg->time),
                                     build_pointer_event_state (msg),
+                                    point.x,
+                                    point.y,
                                     delta_x,
                                     delta_y,
                                     FALSE);
@@ -2792,6 +2794,8 @@ gdk_event_translate (MSG *msg,
                                              NULL,
                                              _gdk_win32_get_next_tick (msg->time),
                                              build_pointer_event_state (msg),
+                                             point.x,
+                                             point.y,
                                              direction,
                                              TRUE);
 
