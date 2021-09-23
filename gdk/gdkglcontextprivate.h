@@ -106,12 +106,11 @@ void                    gdk_gl_context_set_is_legacy            (GdkGLContext   
                                                                  gboolean         is_legacy);
 
 void                    gdk_gl_context_upload_texture           (GdkGLContext    *context,
-                                                                 const guchar    *data,
+                                                                 GdkTexture      *texture,
+                                                                 int              x,
+                                                                 int              y,
                                                                  int              width,
                                                                  int              height,
-                                                                 int              stride,
-                                                                 GdkMemoryFormat  data_format,
-                                                                 GdkColorProfile *color_profile,
                                                                  guint            texture_target);
 GdkGLContextPaintData * gdk_gl_context_get_paint_data           (GdkGLContext    *context);
 gboolean                gdk_gl_context_use_texture_rectangle    (GdkGLContext    *context);
