@@ -1281,7 +1281,7 @@ Suspendisse feugiat quam quis dolor accumsan cursus.</property>
                                 </property>
                                 <property name="tab">
                                   <object class="GtkLabel" id="label5">
-                                    <property name="label" translatable="1">page 1</property>
+                                    <property name="label" translatable="1">Sunset</property>
                                   </object>
                                 </property>
                               </object>
@@ -1311,7 +1311,7 @@ Suspendisse feugiat quam quis dolor accumsan cursus.</property>
                                 </property>
                                 <property name="tab">
                                   <object class="GtkLabel" id="label6">
-                                    <property name="label" translatable="1">page 2</property>
+                                    <property name="label" translatable="1">NYC</property>
                                   </object>
                                 </property>
                               </object>
@@ -1341,7 +1341,7 @@ Suspendisse feugiat quam quis dolor accumsan cursus.</property>
                                 </property>
                                 <property name="tab">
                                   <object class="GtkLabel" id="label7">
-                                    <property name="label" translatable="1">page 3</property>
+                                    <property name="label" translatable="1">Beach</property>
                                   </object>
                                 </property>
                               </object>
