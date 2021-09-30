@@ -148,6 +148,12 @@ GDK_AVAILABLE_IN_ALL
 gboolean              gtk_flow_box_get_activate_on_single_click (GtkFlowBox        *box);
 
 GDK_AVAILABLE_IN_ALL
+void                  gtk_flow_box_prepend                      (GtkFlowBox        *box,
+                                                                 GtkWidget         *child);
+GDK_AVAILABLE_IN_ALL
+void                  gtk_flow_box_append                       (GtkFlowBox        *box,
+                                                                 GtkWidget         *child);
+GDK_AVAILABLE_IN_ALL
 void                  gtk_flow_box_insert                       (GtkFlowBox        *box,
                                                                  GtkWidget         *widget,
                                                                  int                position);

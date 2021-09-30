@@ -4073,6 +4073,40 @@ gtk_flow_box_insert_widget (GtkFlowBox    *box,
 }
 
 /**
+ * gtk_flow_box_prepend:
+ * @box: a `GtkFlowBox
+ * @child: the `GtkWidget` to add
+ *
+ * Adds @widget to the start of @box
+ *
+ * If a sort function is set, the widget will
+ * actually be inserted at the calculated position.
+ */
+void
+gtk_flow_box_prepend (GtkFlowBox *box,
+                      GtkWidget  *child)
+{
+  gtk_flow_box_insert (box, child, 0);
+}
+
+/**
+ * gtk_flow_box_prepend:
+ * @box: a `GtkFlowBox
+ * @child: the `GtkWidget` to add
+ *
+ * Adds @widget to the end of @box
+ *
+ * If a sort function is set, the widget will
+ * actually be inserted at the calculated position.
+ */
+void
+gtk_flow_box_append (GtkFlowBox *box,
+                     GtkWidget  *child)
+{
+  gtk_flow_box_insert (box, child, -1);
+}
+
+/**
  * gtk_flow_box_insert:
  * @box: a `GtkFlowBox`
  * @widget: the `GtkWidget` to add
