@@ -22,8 +22,11 @@
 
 #include <gdk/gdkprofilerprivate.h>
 #include <gdk/gdkdisplayprivate.h>
+#include <gdk/gdkglcontextprivate.h>
+#include <gdk/gdksurfaceprivate.h>
 #include <gsk/gskdebugprivate.h>
 #include <gsk/gskrendererprivate.h>
+#include <gsk/gskrendernodeprivate.h>
 
 #include "gsknglcommandqueueprivate.h"
 #include "gskngldriverprivate.h"
@@ -199,6 +202,9 @@ gsk_ngl_renderer_render (GskRenderer          *renderer,
   viewport.origin.y = 0;
   viewport.size.width = gdk_surface_get_width (surface) * scale_factor;
   viewport.size.height = gdk_surface_get_height (surface) * scale_factor;
+
+  gdk_surface_set_hdr (surface, gsk_render_node_is_hdr (root) &&
+                                gdk_gl_context_can_hdr (self->context));
 
   gdk_gl_context_make_current (self->context);
   gdk_draw_context_begin_frame (GDK_DRAW_CONTEXT (self->context), update_area);
