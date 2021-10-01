@@ -114,6 +114,7 @@ GskNglTexture *
 gsk_ngl_texture_pool_get (GskNglTexturePool *self,
                           int                width,
                           int                height,
+                          int                format,
                           int                min_filter,
                           int                mag_filter)
 {
@@ -125,6 +126,7 @@ gsk_ngl_texture_pool_get (GskNglTexturePool *self,
   texture->link.data = texture;
   texture->min_filter = min_filter;
   texture->mag_filter = mag_filter;
+  texture->format = format;
 
   glGenTextures (1, &texture->texture_id);
 
@@ -136,9 +138,9 @@ gsk_ngl_texture_pool_get (GskNglTexturePool *self,
   glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
   if (gdk_gl_context_get_use_es (gdk_gl_context_get_current ()))
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D (GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
   else
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D (GL_TEXTURE_2D, 0, format, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 
   glBindTexture (GL_TEXTURE_2D, 0);
 
@@ -149,6 +151,7 @@ GskNglTexture *
 gsk_ngl_texture_new (guint  texture_id,
                      int    width,
                      int    height,
+                     int    format,
                      int    min_filter,
                      int    mag_filter,
                      gint64 frame_id)
@@ -160,6 +163,7 @@ gsk_ngl_texture_new (guint  texture_id,
   texture->link.data = texture;
   texture->min_filter = min_filter;
   texture->mag_filter = mag_filter;
+  texture->format = format;
   texture->width = width;
   texture->height = height;
   texture->last_used_in_frame = frame_id;

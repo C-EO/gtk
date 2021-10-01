@@ -72,6 +72,7 @@ struct _GskNglTexture
   int height;
   int min_filter;
   int mag_filter;
+  int format;
 
   /* Set when used by an atlas so we don't drop the texture */
   guint              permanent : 1;
@@ -82,6 +83,7 @@ void                          gsk_ngl_texture_pool_clear     (GskNglTexturePool 
 GskNglTexture                *gsk_ngl_texture_pool_get       (GskNglTexturePool    *self,
                                                               int                   width,
                                                               int                   height,
+                                                              int                   format,
                                                               int                   min_filter,
                                                               int                   mag_filter);
 void                          gsk_ngl_texture_pool_put       (GskNglTexturePool    *self,
@@ -89,6 +91,7 @@ void                          gsk_ngl_texture_pool_put       (GskNglTexturePool 
 GskNglTexture                *gsk_ngl_texture_new            (guint                 texture_id,
                                                               int                   width,
                                                               int                   height,
+                                                              int                   format,
                                                               int                   min_filter,
                                                               int                   mag_filter,
                                                               gint64                frame_id);
