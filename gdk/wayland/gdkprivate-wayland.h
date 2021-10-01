@@ -202,4 +202,7 @@ GdkSurface * create_dnd_surface (GdkDisplay *display);
 GdkModifierType gdk_wayland_keymap_get_gdk_modifiers (GdkKeymap *keymap,
                                                       guint32    mods);
 
+char * describe_egl_config (EGLDisplay dpy,
+                            EGLConfig  config);
+
 #endif /* __GDK_PRIVATE_WAYLAND_H__ */

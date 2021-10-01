@@ -458,12 +458,69 @@ get_eglconfig (EGLDisplay dpy)
 
   /* Pick first valid configuration i guess? */
   if (!eglChooseConfig (dpy, attrs, &config, 1, &count) || count < 1)
-    return NULL;
+     return NULL;
 
   return config;
 }
 
 #undef MAX_EGL_ATTRS
+
+static int
+strvcmp (gconstpointer p1,
+         gconstpointer p2)
+{
+  const char * const *s1 = p1;
+  const char * const *s2 = p2;
+
+  return strcmp (*s1, *s2);
+}
+
+static char *
+describe_extensions (EGLDisplay dpy)
+{
+  const char *extensions;
+  char **exts;
+  char *ext;
+
+  extensions = eglQueryString (dpy, EGL_EXTENSIONS);
+
+  exts = g_strsplit (extensions, " ", -1);
+  qsort (exts, g_strv_length (exts), sizeof (char *), strvcmp);
+
+  ext = g_strjoinv ("\n\t", exts);
+  if (ext[0] == '\n')
+    ext[0] = ' ';
+
+  g_strfreev (exts);
+
+  return g_strstrip (ext);
+}
+
+char *
+describe_egl_config (EGLDisplay dpy,
+                     EGLConfig  config)
+{
+  EGLint red, green, blue, alpha, type;
+
+  if (!config)
+    return g_strdup ("-");
+
+  if (!eglGetConfigAttrib (dpy, config, EGL_RED_SIZE, &red) ||
+      !eglGetConfigAttrib (dpy, config, EGL_GREEN_SIZE, &green) ||
+      !eglGetConfigAttrib (dpy, config, EGL_BLUE_SIZE, &blue) ||
+      !eglGetConfigAttrib (dpy, config, EGL_ALPHA_SIZE, &alpha))
+    return g_strdup ("Unknown");
+
+  if (epoxy_has_egl_extension (dpy, "EGL_EXT_pixel_format_float"))
+    {
+      if (!eglGetConfigAttrib (dpy, config, EGL_COLOR_COMPONENT_TYPE_EXT, &type))
+        type = EGL_COLOR_COMPONENT_TYPE_FIXED_EXT;
+    }
+  else
+    type = EGL_COLOR_COMPONENT_TYPE_FIXED_EXT;
+
+  return g_strdup_printf ("R%dG%dB%dA%d%s", red, green, blue, alpha, type == EGL_COLOR_COMPONENT_TYPE_FIXED_EXT ? "" : " float");
+}
 
 GdkGLContext *
 gdk_wayland_display_init_gl (GdkDisplay  *display,
@@ -555,14 +612,14 @@ gdk_wayland_display_init_gl (GdkDisplay  *display,
     }
 
   start_time2 = GDK_PROFILER_CURRENT_TIME;
-  display_wayland->egl_config = get_eglconfig (dpy);
+  get_eglconfig (dpy, &display_wayland->egl_config_sdr, &display_wayland->egl_config_hdr);
   gdk_profiler_end_mark (start_time2, "get_eglconfig", NULL);
-  if (!display_wayland->egl_config)
+  if (!display_wayland->egl_config_sdr && !display_wayland->egl_config_hdr)
     {
       eglTerminate (dpy);
       g_set_error_literal (error, GDK_GL_ERROR,
                            GDK_GL_ERROR_UNSUPPORTED_FORMAT,
-                           _("No available configurations for the given pixel format"));
+                           _("No available configurations"));
       return NULL;
     }
 
@@ -576,19 +633,25 @@ gdk_wayland_display_init_gl (GdkDisplay  *display,
   display_wayland->have_egl_swap_buffers_with_damage =
     epoxy_has_egl_extension (dpy, "EGL_EXT_swap_buffers_with_damage");
 
-  GDK_DISPLAY_NOTE (display, OPENGL,
+  GDK_DISPLAY_NOTE (display, OPENGL, {
+            char *ext = describe_extensions (dpy);
+            char *cfg = describe_egl_config (dpy, display_wayland->egl_config);
             g_message ("EGL API version %d.%d found\n"
                        " - Vendor: %s\n"
                        " - Version: %s\n"
                        " - Client APIs: %s\n"
                        " - Extensions:\n"
-                       "\t%s",
+                       "\t%s\n"
+                       " - Selected fbconfig: %s",
                        display_wayland->egl_major_version,
                        display_wayland->egl_minor_version,
                        eglQueryString (dpy, EGL_VENDOR),
                        eglQueryString (dpy, EGL_VERSION),
                        eglQueryString (dpy, EGL_CLIENT_APIS),
-                       eglQueryString (dpy, EGL_EXTENSIONS)));
+                       ext, cfg);
+            g_free (cfg);
+            g_free (ext);
+  });
 
   ctx = g_object_new (GDK_TYPE_WAYLAND_GL_CONTEXT,
                       "display", display,
