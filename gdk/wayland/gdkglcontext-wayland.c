@@ -58,6 +58,7 @@ gdk_wayland_gl_context_realize (GdkGLContext *context,
   GdkGLContext *share = gdk_display_get_gl_context (display);
   GdkWaylandDisplay *display_wayland = GDK_WAYLAND_DISPLAY (display);
   EGLContext ctx;
+  EGLContext shared;
   EGLint context_attribs[N_EGL_ATTRS];
   int major, minor, flags;
   gboolean debug_bit, forward_bit, legacy_bit, use_es;
@@ -121,10 +122,14 @@ gdk_wayland_gl_context_realize (GdkGLContext *context,
                                legacy_bit ? "yes" : "no",
                                use_es ? "yes" : "no"));
 
+  if (share != NULL)
+    shared = GDK_WAYLAND_GL_CONTEXT (share)->egl_context;
+  else
+    shared = EGL_NO_CONTEXT;
+
   ctx = eglCreateContext (display_wayland->egl_display,
-                          display_wayland->egl_config,
-                          share != NULL ? GDK_WAYLAND_GL_CONTEXT (share)->egl_context
-                                        : EGL_NO_CONTEXT,
+                          EGL_NO_CONFIG_KHR,
+                          shared,
                           context_attribs);
 
   /* If context creation failed without the ES bit, let's try again with it */
@@ -147,10 +152,10 @@ gdk_wayland_gl_context_realize (GdkGLContext *context,
 
       GDK_DISPLAY_NOTE (display, OPENGL,
                 g_message ("eglCreateContext failed, switching to OpenGL ES"));
+
       ctx = eglCreateContext (display_wayland->egl_display,
-                              display_wayland->egl_config,
-                              share != NULL ? GDK_WAYLAND_GL_CONTEXT (share)->egl_context
-                                            : EGL_NO_CONTEXT,
+                              EGL_NO_CONFIG_KHR,
+                              shared,
                               context_attribs);
     }
 
@@ -176,10 +181,10 @@ gdk_wayland_gl_context_realize (GdkGLContext *context,
 
       GDK_DISPLAY_NOTE (display, OPENGL,
                 g_message ("eglCreateContext failed, switching to legacy"));
+
       ctx = eglCreateContext (display_wayland->egl_display,
-                              display_wayland->egl_config,
-                              share != NULL ? GDK_WAYLAND_GL_CONTEXT (share)->egl_context
-                                            : EGL_NO_CONTEXT,
+                              EGL_NO_CONFIG_KHR,
+                              shared,
                               context_attribs);
     }
 
@@ -608,6 +613,15 @@ gdk_wayland_display_init_gl (GdkDisplay  *display,
       g_set_error_literal (error, GDK_GL_ERROR,
                            GDK_GL_ERROR_UNSUPPORTED_PROFILE,
                            _("Surfaceless contexts are not supported on this EGL implementation"));
+      return NULL;
+    }
+
+  if (!epoxy_has_egl_extension (dpy, "EGL_KHR_no_config_context"))
+    {
+      eglTerminate (dpy);
+      g_set_error_literal (error, GDK_GL_ERROR,
+                           GDK_GL_ERROR_UNSUPPORTED_PROFILE,
+                           _("Configless contexts are not supported on this EGL implementation"));
       return NULL;
     }
 
