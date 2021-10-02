@@ -346,6 +346,16 @@ gdk_wayland_gl_context_end_frame (GdkDrawContext *draw_context,
   gdk_wayland_surface_notify_committed (surface);
 }
 
+static gboolean
+gdk_wayland_gl_context_can_hdr (GdkGLContext *context)
+{
+  GdkSurface *surface = gdk_gl_context_get_surface (context);
+  GdkDisplay *display = gdk_surface_get_display (surface);
+  GdkWaylandDisplay *display_wayland = GDK_WAYLAND_DISPLAY (display);
+
+  return display_wayland->egl_config_hdr != 0;
+}
+
 static void
 gdk_wayland_gl_context_class_init (GdkWaylandGLContextClass *klass)
 {
@@ -362,6 +372,7 @@ gdk_wayland_gl_context_class_init (GdkWaylandGLContextClass *klass)
   context_class->make_current = gdk_wayland_gl_context_make_current;
   context_class->clear_current = gdk_wayland_gl_context_clear_current;
   context_class->get_damage = gdk_wayland_gl_context_get_damage;
+  context_class->can_hdr = gdk_wayland_gl_context_can_hdr;
 
   context_class->backend_type = GDK_GL_EGL;
 }
