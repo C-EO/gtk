@@ -152,7 +152,8 @@ struct _GdkWaylandDisplay
 
   /* egl info */
   EGLDisplay egl_display;
-  EGLConfig egl_config;
+  EGLConfig egl_config_sdr;
+  EGLConfig egl_config_hdr;
   int egl_major_version;
   int egl_minor_version;
 

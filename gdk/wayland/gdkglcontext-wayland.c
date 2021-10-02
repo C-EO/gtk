@@ -435,13 +435,23 @@ out:
 
 #define MAX_EGL_ATTRS   30
 
-static EGLConfig
-get_eglconfig (EGLDisplay dpy)
+static void
+get_eglconfig (EGLDisplay dpy,
+               EGLConfig *config_sdr,
+               EGLConfig *config_hdr)
 {
   EGLint attrs[MAX_EGL_ATTRS];
-  EGLint count;
-  EGLConfig config;
-  int i = 0;
+  EGLint n_configs;
+  EGLConfig *configs;
+  EGLint type_hdr;
+  int i;
+
+  *config_sdr = 0;
+  *config_hdr = 0;
+
+  n_configs = 0;
+
+  i = 0;
 
   attrs[i++] = EGL_SURFACE_TYPE;
   attrs[i++] = EGL_WINDOW_BIT;
@@ -458,14 +468,55 @@ get_eglconfig (EGLDisplay dpy)
   attrs[i++] = EGL_ALPHA_SIZE;
   attrs[i++] = 8;
 
+  if (epoxy_has_egl_extension (dpy, "EGL_EXT_pixel_format_float"))
+    {
+      attrs[i++] = EGL_COLOR_COMPONENT_TYPE_EXT;
+      attrs[i++] = EGL_DONT_CARE;
+    }
+
   attrs[i++] = EGL_NONE;
   g_assert (i < MAX_EGL_ATTRS);
 
-  /* Pick first valid configuration i guess? */
-  if (!eglChooseConfig (dpy, attrs, &config, 1, &count) || count < 1)
-     return NULL;
+  eglChooseConfig (dpy, attrs, NULL, -1, &n_configs);
 
-  return config;
+  configs = g_alloca (sizeof (EGLConfig) * n_configs);
+
+  eglChooseConfig (dpy, attrs, configs, n_configs, &n_configs);
+
+  type_hdr = 0;
+
+  for (i = 0; i < n_configs; i++)
+    {
+      EGLint red, green, blue, alpha, type;
+
+      if (!eglGetConfigAttrib (dpy, configs[i], EGL_RED_SIZE, &red) ||
+          !eglGetConfigAttrib (dpy, configs[i], EGL_GREEN_SIZE, &green) ||
+          !eglGetConfigAttrib (dpy, configs[i], EGL_BLUE_SIZE, &blue) ||
+          !eglGetConfigAttrib (dpy, configs[i], EGL_ALPHA_SIZE, &alpha))
+        continue;
+
+      if (epoxy_has_egl_extension (dpy, "EGL_EXT_pixel_format_float"))
+        {
+          if (!eglGetConfigAttrib (dpy, configs[i], EGL_COLOR_COMPONENT_TYPE_EXT, &type))
+            type = EGL_COLOR_COMPONENT_TYPE_FIXED_EXT;
+        }
+      else
+        type = EGL_COLOR_COMPONENT_TYPE_FIXED_EXT;
+
+      if (*config_sdr == 0 &&
+          type == EGL_COLOR_COMPONENT_TYPE_FIXED_EXT &&
+          red == 8 && green == 8 && blue == 8 && alpha == 8)
+        {
+          *config_sdr = configs[i];
+        }
+
+      if ((type_hdr == 0 || type == EGL_COLOR_COMPONENT_TYPE_FLOAT_EXT) &&
+          red == 16 && green == 16 && blue == 16 && alpha == 16)
+        {
+          *config_hdr = configs[i];
+          type_hdr = type;
+        }
+    }
 }
 
 #undef MAX_EGL_ATTRS
@@ -649,22 +700,25 @@ gdk_wayland_display_init_gl (GdkDisplay  *display,
 
   GDK_DISPLAY_NOTE (display, OPENGL, {
             char *ext = describe_extensions (dpy);
-            char *cfg = describe_egl_config (dpy, display_wayland->egl_config);
+            char *cfg_sdr = describe_egl_config (dpy, display_wayland->egl_config_sdr);
+            char *cfg_hdr = describe_egl_config (dpy, display_wayland->egl_config_hdr);
             g_message ("EGL API version %d.%d found\n"
                        " - Vendor: %s\n"
                        " - Version: %s\n"
                        " - Client APIs: %s\n"
                        " - Extensions:\n"
                        "\t%s\n"
-                       " - Selected fbconfig: %s",
+                       " - SDR config: %s\n"
+                       " - HDR config: %s",
                        display_wayland->egl_major_version,
                        display_wayland->egl_minor_version,
                        eglQueryString (dpy, EGL_VENDOR),
                        eglQueryString (dpy, EGL_VERSION),
                        eglQueryString (dpy, EGL_CLIENT_APIS),
-                       ext, cfg);
-            g_free (cfg);
+                       ext, cfg_sdr, cfg_hdr);
             g_free (ext);
+            g_free (cfg_sdr);
+            g_free (cfg_hdr);
   });
 
   ctx = g_object_new (GDK_TYPE_WAYLAND_GL_CONTEXT,

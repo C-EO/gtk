@@ -123,6 +123,7 @@ struct _GdkWaylandSurface
   unsigned int awaiting_frame : 1;
   unsigned int awaiting_frame_frozen : 1;
   unsigned int is_drag_surface : 1;
+  unsigned int hdr : 1;
 
   int pending_buffer_offset_x;
   int pending_buffer_offset_y;
@@ -346,6 +347,7 @@ gdk_wayland_surface_init (GdkWaylandSurface *impl)
   impl->saved_width = -1;
   impl->saved_height = -1;
   impl->shortcuts_inhibitors = g_hash_table_new (NULL, NULL);
+  impl->hdr = FALSE;
 }
 
 static void
@@ -4263,6 +4265,33 @@ gdk_wayland_surface_supports_edge_constraints (GdkSurface *surface)
 }
 
 static void
+gdk_wayland_surface_set_hdr (GdkSurface *surface,
+                             gboolean    hdr)
+{
+  GdkWaylandSurface *impl = GDK_WAYLAND_SURFACE (surface);
+  GdkWaylandDisplay *display_wayland =
+    GDK_WAYLAND_DISPLAY (gdk_surface_get_display (surface));
+
+  if (impl->hdr == hdr)
+    return;
+
+  if (!display_wayland->egl_config_hdr)
+    return;
+
+  impl->hdr = hdr;
+
+  if (impl->egl_surface)
+    {
+      GDK_DISPLAY_NOTE (GDK_DISPLAY (display_wayland), OPENGL,
+                        g_message ("Rendering changed to %s, resetting egl surface",
+                        hdr ? "HDR" : "SDR"));
+
+      eglDestroySurface (display_wayland->egl_display, impl->egl_surface);
+      impl->egl_surface = NULL;
+    }
+}
+
+static void
 gdk_wayland_surface_class_init (GdkWaylandSurfaceClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -4279,6 +4308,7 @@ gdk_wayland_surface_class_init (GdkWaylandSurfaceClass *klass)
   impl_class->set_input_region = gdk_wayland_surface_set_input_region;
   impl_class->destroy = gdk_wayland_surface_destroy;
   impl_class->beep = gdk_wayland_surface_beep;
+  impl_class->set_hdr = gdk_wayland_surface_set_hdr;
 
   impl_class->destroy_notify = gdk_wayland_surface_destroy_notify;
   impl_class->drag_begin = _gdk_wayland_surface_drag_begin;
@@ -4353,7 +4383,6 @@ gdk_wayland_surface_get_egl_surface (GdkSurface *surface)
 {
   GdkWaylandDisplay *display = GDK_WAYLAND_DISPLAY (gdk_surface_get_display (surface));
   GdkWaylandSurface *impl;
-  struct wl_egl_window *egl_window;
 
   g_return_val_if_fail (GDK_IS_WAYLAND_SURFACE (surface), NULL);
 
@@ -4361,10 +4390,22 @@ gdk_wayland_surface_get_egl_surface (GdkSurface *surface)
 
   if (impl->egl_surface == NULL)
     {
+      struct wl_egl_window *egl_window;
+      EGLConfig config;
+
       egl_window = gdk_wayland_surface_get_wl_egl_window (surface);
 
+      if (impl->hdr && display->egl_config_hdr)
+        config = display->egl_config_hdr;
+      else
+        config = display->egl_config_sdr;
+
+      GDK_DISPLAY_NOTE (GDK_DISPLAY (display), OPENGL,
+                        g_message ("Create EGL surface with config: %s",
+                                   describe_egl_config (display->egl_display, config)));
+
       impl->egl_surface =
-        eglCreateWindowSurface (display->egl_display, display->egl_config, egl_window, NULL);
+        eglCreateWindowSurface (display->egl_display, config, egl_window, NULL);
     }
 
   return impl->egl_surface;
@@ -5175,4 +5216,3 @@ gdk_wayland_drag_surface_iface_init (GdkDragSurfaceInterface *iface)
 {
   iface->present = gdk_wayland_drag_surface_present;
 }
-
