@@ -805,9 +805,9 @@ gsk_ngl_driver_load_texture (GskNglDriver *self,
                              int           mag_filter)
 {
   GdkGLContext *context;
-  GdkTexture *downloaded_texture;
+  GdkTexture *downloaded_texture = NULL;
+  guint texture_id = 0;
   GskNglTexture *t;
-  guint texture_id;
   int height;
   int width;
   int format;
@@ -817,6 +817,8 @@ gsk_ngl_driver_load_texture (GskNglDriver *self,
   g_return_val_if_fail (GSK_IS_NGL_COMMAND_QUEUE (self->command_queue), 0);
 
   context = self->command_queue->context;
+  width = gdk_texture_get_width (texture);
+  height = gdk_texture_get_height (texture);
 
   format = GL_RGBA8;
 
@@ -848,9 +850,6 @@ gsk_ngl_driver_load_texture (GskNglDriver *self,
                */
               gdk_gl_context_make_current (context);
 
-              width = gdk_texture_get_width (texture);
-              height = gdk_texture_get_height (texture);
-
               gsk_ngl_driver_create_render_target (self,
                                                    width, height,
                                                    format,
@@ -877,7 +876,18 @@ gsk_ngl_driver_load_texture (GskNglDriver *self,
 
               gsk_ngl_command_queue_bind_framebuffer (self->command_queue, prev_fbo);
 
-              return gsk_ngl_driver_release_render_target (self, target, FALSE);
+              texture_id = gsk_ngl_driver_release_render_target (self, target, FALSE);
+
+              t = gsk_ngl_texture_new (texture_id,
+                                       width, height, format, min_filter, mag_filter,
+                                       self->current_frame_id);
+
+              /* Use gsk_ngl_texture_free() as destroy notify here since we are
+               * not inserting this GskNglTexture into self->textures!
+               */
+              gdk_texture_set_render_data (texture, self, t, (GDestroyNotify)gsk_ngl_texture_free);
+
+              return texture_id;
             }
         }
       else
@@ -896,6 +906,8 @@ gsk_ngl_driver_load_texture (GskNglDriver *self,
       downloaded_texture = gdk_texture_download_texture (texture);
     }
 
+  g_assert (downloaded_texture && !texture_id);
+
   /* The download_texture() call may have switched the GL context. Make sure
    * the right context is at work again. */
   gdk_gl_context_make_current (context);
@@ -911,6 +923,8 @@ gsk_ngl_driver_load_texture (GskNglDriver *self,
                                                      min_filter,
                                                      mag_filter);
 
+  g_clear_object (&downloaded_texture);
+
   t = gsk_ngl_texture_new (texture_id,
                            width, height, format, min_filter, mag_filter,
                            self->current_frame_id);
@@ -922,8 +936,6 @@ gsk_ngl_driver_load_texture (GskNglDriver *self,
 
   gdk_gl_context_label_object_printf (context, GL_TEXTURE, t->texture_id,
                                       "GdkTexture<%p> %d", texture, t->texture_id);
-
-  g_clear_object (&downloaded_texture);
 
   return texture_id;
 }
