@@ -303,6 +303,12 @@ gdk_gl_context_surface_resized (GdkDrawContext *draw_context)
   gdk_gl_context_clear_old_updated_area (context);
 }
 
+static gboolean
+gdk_gl_context_real_can_hdr (GdkGLContext *self)
+{
+  return FALSE;
+}
+
 static void
 gdk_gl_context_class_init (GdkGLContextClass *klass)
 {
@@ -312,6 +318,7 @@ gdk_gl_context_class_init (GdkGLContextClass *klass)
   klass->realize = gdk_gl_context_real_realize;
   klass->get_damage = gdk_gl_context_real_get_damage;
   klass->is_shared = gdk_gl_context_real_is_shared;
+  klass->can_hdr = gdk_gl_context_real_can_hdr;
 
   draw_context_class->begin_frame = gdk_gl_context_real_begin_frame;
   draw_context_class->end_frame = gdk_gl_context_real_end_frame;
@@ -1315,4 +1322,10 @@ gdk_gl_backend_use (GdkGLBackend backend_type)
     }
 
   g_assert (the_gl_backend_type == backend_type);
+}
+
+gboolean
+gdk_gl_context_can_hdr (GdkGLContext *self)
+{
+  return GDK_GL_CONTEXT_GET_CLASS (self)->can_hdr (self);
 }

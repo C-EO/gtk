@@ -72,6 +72,8 @@ struct _GdkGLContextClass
 
   gboolean              (* is_shared)                           (GdkGLContext          *self,
                                                                  GdkGLContext          *other);
+
+  gboolean              (* can_hdr)                             (GdkGLContext          *self);
 };
 
 typedef struct {
@@ -130,6 +132,8 @@ gboolean                gdk_gl_context_has_version              (GdkGLContext   
 gboolean                gdk_gl_context_has_debug                (GdkGLContext    *self) G_GNUC_PURE;
 
 gboolean                gdk_gl_context_use_es_bgra              (GdkGLContext    *context);
+
+gboolean                gdk_gl_context_can_hdr                  (GdkGLContext    *context);
 
 typedef struct {
   float x1, y1, x2, y2;
