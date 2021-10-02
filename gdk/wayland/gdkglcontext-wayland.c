@@ -282,9 +282,10 @@ gdk_wayland_gl_context_make_current (GdkGLContext *context,
 
 static void
 gdk_wayland_gl_context_begin_frame (GdkDrawContext *draw_context,
+                                    gboolean        request_hdr,
                                     cairo_region_t *region)
 {
-  GDK_DRAW_CONTEXT_CLASS (gdk_wayland_gl_context_parent_class)->begin_frame (draw_context, region);
+  GDK_DRAW_CONTEXT_CLASS (gdk_wayland_gl_context_parent_class)->begin_frame (draw_context, request_hdr, region);
 
   glDrawBuffers (1, (GLenum[1]) { GL_BACK });
 }
