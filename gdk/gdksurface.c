@@ -480,6 +480,12 @@ gdk_surface_init (GdkSurface *surface)
 }
 
 static void
+gdk_surface_real_set_hdr (GdkSurface *surface,
+                          gboolean    hdr)
+{
+}
+
+static void
 gdk_surface_class_init (GdkSurfaceClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -489,6 +495,7 @@ gdk_surface_class_init (GdkSurfaceClass *klass)
   object_class->get_property = gdk_surface_get_property;
 
   klass->beep = gdk_surface_real_beep;
+  klass->set_hdr = gdk_surface_real_set_hdr;
 
   /**
    * GdkSurface:color-profile: (attributes org.gtk.Property.get=gdk_surface_get_color_profile)
@@ -3042,3 +3049,11 @@ gdk_surface_leave_monitor (GdkSurface *surface,
 {
   g_signal_emit (surface, signals[LEAVE_MONITOR], 0, monitor);
 }
+
+void
+gdk_surface_set_hdr (GdkSurface *surface,
+                     gboolean    hdr)
+{
+  GDK_SURFACE_GET_CLASS (surface)->set_hdr (surface, hdr);
+}
+
